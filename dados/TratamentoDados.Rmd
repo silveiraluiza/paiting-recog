@@ -1,0 +1,93 @@
+---
+title: "Painting Recognition Data"
+author: "Luiza Carvalho"
+date: "5 de agosto de 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Importação dos Dados
+
+Primeiro iremos importar as bibliotecas necessárias e os dados do DataSet original: paintings.csv.
+
+Então como queremos separar esse dataset em vários subsets contendo apenas as obras de um dado artista, uma lista é criada com todos os nomes dos artistas que estão presentes nos dados. 
+
+```{r, warning=FALSE,message=FALSE}
+library(readr)
+library(tidyverse)
+
+setwd("C:/Users/carva/Documents/paiting-recog/dados")
+
+paintings <- read_csv("./paintings.csv")
+
+authors <- unique(paintings$AUTHOR)
+
+```
+
+## Subsets
+
+Para obter os dados de treino queremos selecionar 20 obras de cada artista, para isso iremos selecionar todos os artistas que possuem mais de 20 obras (para que seja possível realizar uma amostragem) e criar um subset de dados para cada um.
+
+```{r, warning=FALSE,message=FALSE}
+
+for (i in 1:3541){
+  nam <- paste("A", i, sep = "")
+  
+  if(nrow(subset(paintings, AUTHOR == authors[i])) > 20){
+    assign(nam,subset(paintings, AUTHOR == authors[i]))
+  }
+}
+
+# Aqui adquirimos uma lista que contém o nome de todos os subsets criados
+rm(i, authors, nam, paintings)
+datasets <- ls()
+
+```
+
+## Criando os dados de Treino
+
+Tendo os subsets de todos os artistas aqui é feita uma retirada de 20 amostras de cada subset e todas elas são colocadas em um único data frame, que é o treino. 
+
+```{r, warning=FALSE,message=FALSE}
+
+training <- sample_n(A1038, 20)
+
+datasets <- datasets[-1]
+
+for (i in datasets){
+  training <- rbind(training, sample_n(get(i), 20))
+}
+
+authors <- unique(training$AUTHOR)
+authors <- sample(authors, 50)
+
+training <- training %>% filter(AUTHOR %in% authors)
+
+```
+
+## Criando os dados de Teste
+
+Após criar os dados de treino filtramos o dataset original para conter apenas os artistas que possuem mais de 20 obras e retiramos dele o subset de treino, assim criando o subset de teste.
+
+```{r, warning=FALSE,message=FALSE}
+
+paintings <- read_csv("./paintings.csv")
+
+paintings <- paintings %>% filter(AUTHOR %in% authors)
+
+test <- paintings[setdiff(rownames(paintings),rownames(training)),]
+
+```
+
+## Exportando Treino e Teste
+
+```{r, warning=FALSE,message=FALSE}
+
+write.table(training, file = "treino.csv",row.names=FALSE, na="",col.names=TRUE, sep=";")
+
+write.table(test, file = "teste.csv",row.names=FALSE, na="",col.names=TRUE, sep=";")
+
+```
